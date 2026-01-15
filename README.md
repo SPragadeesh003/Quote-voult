@@ -272,5 +272,3 @@ This project is licensed under the MIT License.
 - [react-native-android-widget](https://github.com/nicovalencia/react-native-android-widget) - Android widget support
 
 ---
-
-*Built with ❤️ and AI assistance*
