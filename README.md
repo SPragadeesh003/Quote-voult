@@ -2,7 +2,7 @@
 
 A beautifully designed React Native quote collection app built with Expo, featuring personalized themes, daily inspirations, and seamless cloud sync.
 
-![Platform](https://img.shields.io/badge/Platform-iOS%20%7C%20Android-blue)
+![Platform](https://img.shields.io/badge/Platform-%20Android-blue)
 ![Framework](https://img.shields.io/badge/Framework-Expo%20%7C%20React%20Native-purple)
 ![Backend](https://img.shields.io/badge/Backend-Supabase-green)
 
