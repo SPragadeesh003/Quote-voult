@@ -172,6 +172,8 @@ This project was developed using an **AI-assisted pair programming** methodology
    - Code cleanup including comment removal for production
    - Type safety verification with TypeScript
 
+**AI Chat Link**: https://claude.ai/share/6ec810f6-b4af-4dd0-a26d-e92ebf5991d6, https://gemini.google.com/share/5ff49dc5c461 
+
 ### Key AI Contributions
 
 | Feature | AI Contribution |
@@ -198,7 +200,7 @@ This project was developed using an **AI-assisted pair programming** methodology
 
 ### Figma/Stitch Designs
 
-- **Main Design File**: [QuickVault Figma](https://www.figma.com/file/your-figma-link)
+- **Main Design File**: [QuickVault Figma](https://stitch.withgoogle.com/projects/2987496056418618667?pli=1, https://www.figma.com/make/5vW1ZLrgjdIIlYO8qOFiYX/QuoteVault-App-Design?p=f&t=pJF8eKX30JjjIINa-0, https://www.figma.com/make/x4zxN8jW1Q5LxnZZVPOJdK/QuoteVault-App-Design?p=f&t=6MNE6FlS4jIdOY6v-0)
 - **Component Library**: Based on Material Design 3 and iOS Human Interface Guidelines
 - **Color Palettes**: Custom Nature, Spring, Autumn, and Sunset themes
 
