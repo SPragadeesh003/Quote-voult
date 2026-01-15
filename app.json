@@ -12,6 +12,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.quickvault.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -38,11 +39,33 @@
             "backgroundColor": "#000000"
           }
         }
+      ],
+      "@react-native-community/datetimepicker",
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "QuoteWidget",
+              "label": "Daily Quote",
+              "minWidth": "320dp",
+              "minHeight": "100dp",
+              "description": "Displays the quote of the day",
+              "previewImage": "./assets/images/icon.png"
+            }
+          ]
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1c2a2db4-ff2c-4af2-87f9-ad1ee04ff6b7"
+      }
     }
   }
 }

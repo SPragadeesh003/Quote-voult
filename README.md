@@ -1,50 +1,292 @@
-# Welcome to your Expo app 👋
+# QuickVault 📚✨
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A beautifully designed React Native quote collection app built with Expo, featuring personalized themes, daily inspirations, and seamless cloud sync.
 
-## Get started
+![Platform](https://img.shields.io/badge/Platform-iOS%20%7C%20Android-blue)
+![Framework](https://img.shields.io/badge/Framework-Expo%20%7C%20React%20Native-purple)
+![Backend](https://img.shields.io/badge/Backend-Supabase-green)
 
-1. Install dependencies
+## Features
 
-   ```bash
-   npm install
-   ```
+- 🎨 **Dual Visual Styles** - Switch between Material UI (colorful) and Custom UI (dark/glassy) themes
+- 🌈 **Accent Color Themes** - Choose from Nature, Spring, Autumn, and Sunset palettes
+- 📱 **Daily Quote Widget** - Android home screen widget with daily inspiration
+- 🔔 **Configurable Notifications** - Set your preferred time for daily quote reminders
+- 📂 **Collections** - Organize favorite quotes into custom collections
+- 🔍 **Smart Search** - Search across quotes, authors, and categories
+- 📤 **Share Cards** - Export beautiful quote cards with multiple templates
+- 🔐 **Authentication** - Secure sign-up/sign-in with email verification
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
+## 🛠️ Setup Instructions
 
-In the output, you'll find options to open the app in a
+### Prerequisites
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- Node.js 18+ 
+- npm or yarn
+- Expo CLI (`npm install -g expo-cli`)
+- Android Studio (for Android development)
+- Xcode (for iOS development, macOS only)
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+### 1. Clone the Repository
 
 ```bash
-npm run reset-project
+git clone https://github.com/your-username/QuickVault.git
+cd QuickVault/Quick-Vault
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 2. Install Dependencies
 
-## Learn more
+```bash
+npm install
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+### 3. Supabase Configuration
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Create a Supabase project at [supabase.com](https://supabase.com) and configure the following:
 
-## Join the community
+#### Database Tables
 
-Join our community of developers creating universal apps.
+Create these tables in your Supabase SQL editor:
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```sql
+-- Quotes table
+CREATE TABLE quotes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    text TEXT NOT NULL,
+    author TEXT,
+    category TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Profiles table
+CREATE TABLE profiles (
+    id UUID PRIMARY KEY REFERENCES auth.users(id),
+    username TEXT,
+    avatar_url TEXT,
+    updated_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Favorites table
+CREATE TABLE favorites (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    quote_id UUID REFERENCES quotes(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, quote_id)
+);
+
+-- Collections table
+CREATE TABLE collections (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Collection Items table
+CREATE TABLE collection_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    collection_id UUID REFERENCES collections(id) ON DELETE CASCADE,
+    quote_id UUID REFERENCES quotes(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(collection_id, quote_id)
+);
+```
+
+#### Storage Bucket
+
+Create a storage bucket named `quick-volt-pragadeesh` for avatar uploads.
+
+#### Environment Variables
+
+Create a `.env` file in the project root (this file should NOT be committed to git):
+
+```env
+EXPO_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+```
+
+> ⚠️ **Security Note**: Never commit your `.env` file. It's already included in `.gitignore`.
+
+#### Supabase Client Configuration
+
+The app uses this configuration in `config/supabaseConfig.ts`:
+
+```typescript
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || "";
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "";
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    storage: AsyncStorage,
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false,
+  },
+});
+```
+
+#### Authentication Settings
+
+In Supabase Dashboard → Authentication → URL Configuration:
+- Add `quickvault://(tabs)/home` to Redirect URLs for deep linking
+
+### 4. Run the App
+
+```bash
+# Start development server
+npx expo start
+
+# Run on Android
+npx expo run:android
+
+# Run on iOS
+npx expo run:ios
+```
+
+---
+
+## 🤖 AI Coding Approach & Workflow
+
+This project was developed using an **AI-assisted pair programming** methodology with Google's Gemini-powered coding assistant (Antigravity/Claude).
+
+### Development Workflow
+
+1. **Planning Phase**
+   - Created detailed implementation plans for each feature
+   - AI analyzed existing codebase structure before proposing changes
+   - Used task breakdown artifacts to track progress
+
+2. **Execution Phase**  
+   - AI generated code following existing patterns and conventions
+   - Iterative refinement based on user feedback
+   - Real-time error detection and fix suggestions
+
+3. **Verification Phase**
+   - AI identified potential issues and edge cases
+   - Code cleanup including comment removal for production
+   - Type safety verification with TypeScript
+
+### Key AI Contributions
+
+| Feature | AI Contribution |
+|---------|-----------------|
+| Theme System | Designed ThemeContext with persistence, accent colors, and visual style switching |
+| Collections CRUD | Implemented Supabase queries with optimistic updates and error handling |
+| Share Templates | Created 4 quote card templates with font scaling controls |
+| Deep Linking | Configured email verification flow with manual token parsing |
+| Android Widget | Set up react-native-android-widget with daily quote updates |
+
+---
+
+## 🧰 AI Tools Used
+
+| Tool | Purpose |
+|------|---------|
+| **Gemini/Antigravity** | Primary AI coding assistant for code generation, debugging, and refactoring |
+| **GitHub Copilot** | Inline code suggestions and autocompletion |
+| **Figma AI (Stitch)** | UI/UX design ideation and mockup generation |
+
+---
+
+## 🎨 Design Resources
+
+### Figma/Stitch Designs
+
+- **Main Design File**: [QuickVault Figma](https://www.figma.com/file/your-figma-link)
+- **Component Library**: Based on Material Design 3 and iOS Human Interface Guidelines
+- **Color Palettes**: Custom Nature, Spring, Autumn, and Sunset themes
+
+### Design System
+
+```
+Typography:
+- Primary: Google Sans Flex (Variable)
+- Secondary: Outfit
+- Accent: Oswald (Bold templates)
+- Handwriting: Sue Ellen Francisco
+
+Colors:
+- Nature: #4F7942 (Fern Green)
+- Spring: #8BC34A (Spring Green)  
+- Autumn: #FF9800 (Autumn Orange)
+- Sunset: #D32F2F (Sunset Red)
+```
+
+---
+
+## ⚠️ Known Limitations & Incomplete Features
+
+### Current Limitations
+
+1. **Android Widget**
+   - Widget may not update immediately due to Android system restrictions
+   - Requires prebuild (`npx expo prebuild`) for widget functionality
+
+2. **Windows Path Length**
+   - Local Android builds may fail due to Windows 260-character path limit
+   - Workaround: Use EAS Build for cloud compilation
+
+3. **Offline Support**
+   - App requires internet connection for data sync
+   - No offline caching implemented yet
+
+### Incomplete Features
+
+- [ ] **Social Features** - Following users, public collections
+- [ ] **Quote Submission** - User-generated quotes pending moderation
+- [ ] **iOS Widget** - Only Android widget implemented
+- [ ] **Push Notifications** - Currently local notifications only
+- [ ] **Multi-language Support** - English only
+
+### Known Bugs
+
+- FlashList `estimatedItemSize` warning (commented out, needs tuning)
+- Occasional type mismatch in `ProfileScreen.tsx` line 223 (`==` typo)
+
+---
+
+## 📁 Project Structure
+
+```
+Quick-Vault/
+├── app/                    # Expo Router pages
+│   ├── (tabs)/            # Tab navigation screens
+│   ├── auth/              # Authentication screens
+│   ├── category/          # Dynamic category routes
+│   └── collection/        # Collection detail routes
+├── src/
+│   ├── components/        # Reusable UI components
+│   ├── context/           # React Context providers
+│   ├── screens/           # Screen components
+│   ├── services/          # API and utility services
+│   └── styles/            # StyleSheet definitions
+├── constants/             # Colors, Fonts, Theme configs
+├── types/                 # TypeScript type definitions
+├── utils/                 # Helper utilities
+└── config/                # Supabase configuration
+```
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+---
+
+## 🙏 Acknowledgments
+
+- [Expo](https://expo.dev) - React Native framework
+- [Supabase](https://supabase.com) - Backend as a Service
+- [Lucide Icons](https://lucide.dev) - Icon library
+- [react-native-android-widget](https://github.com/nicovalencia/react-native-android-widget) - Android widget support
+
+---
+
+*Built with ❤️ and AI assistance*
