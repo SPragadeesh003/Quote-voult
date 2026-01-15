@@ -224,30 +224,14 @@ Colors:
 
 ### Current Limitations
 
-1. **Android Widget**
-   - Widget may not update immediately due to Android system restrictions
-   - Requires prebuild (`npx expo prebuild`) for widget functionality
-
-2. **Windows Path Length**
-   - Local Android builds may fail due to Windows 260-character path limit
-   - Workaround: Use EAS Build for cloud compilation
-
-3. **Offline Support**
+1. **Offline Support**
    - App requires internet connection for data sync
    - No offline caching implemented yet
 
 ### Incomplete Features
 
-- [ ] **Social Features** - Following users, public collections
-- [ ] **Quote Submission** - User-generated quotes pending moderation
 - [ ] **iOS Widget** - Only Android widget implemented
 - [ ] **Push Notifications** - Currently local notifications only
-- [ ] **Multi-language Support** - English only
-
-### Known Bugs
-
-- FlashList `estimatedItemSize` warning (commented out, needs tuning)
-- Occasional type mismatch in `ProfileScreen.tsx` line 223 (`==` typo)
 
 ---
 
