@@ -2,7 +2,7 @@
 
 A beautifully designed React Native quote collection app built with Expo, featuring personalized themes, daily inspirations, and seamless cloud sync.
 
-![Platform](https://img.shields.io/badge/Platform-iOS%20%7C%20Android-blue)
+![Platform](https://img.shields.io/badge/Platform-%20Android-blue)
 ![Framework](https://img.shields.io/badge/Framework-Expo%20%7C%20React%20Native-purple)
 ![Backend](https://img.shields.io/badge/Backend-Supabase-green)
 
@@ -172,6 +172,8 @@ This project was developed using an **AI-assisted pair programming** methodology
    - Code cleanup including comment removal for production
    - Type safety verification with TypeScript
 
+**AI Chat Link**: https://claude.ai/share/6ec810f6-b4af-4dd0-a26d-e92ebf5991d6, https://gemini.google.com/share/5ff49dc5c461 
+
 ### Key AI Contributions
 
 | Feature | AI Contribution |
@@ -198,7 +200,7 @@ This project was developed using an **AI-assisted pair programming** methodology
 
 ### Figma/Stitch Designs
 
-- **Main Design File**: [QuickVault Figma](https://www.figma.com/file/your-figma-link)
+- **Main Design File**: [QuickVault Figma](https://stitch.withgoogle.com/projects/2987496056418618667?pli=1, https://www.figma.com/make/5vW1ZLrgjdIIlYO8qOFiYX/QuoteVault-App-Design?p=f&t=pJF8eKX30JjjIINa-0, https://www.figma.com/make/x4zxN8jW1Q5LxnZZVPOJdK/QuoteVault-App-Design?p=f&t=6MNE6FlS4jIdOY6v-0)
 - **Component Library**: Based on Material Design 3 and iOS Human Interface Guidelines
 - **Color Palettes**: Custom Nature, Spring, Autumn, and Sunset themes
 
@@ -224,30 +226,14 @@ Colors:
 
 ### Current Limitations
 
-1. **Android Widget**
-   - Widget may not update immediately due to Android system restrictions
-   - Requires prebuild (`npx expo prebuild`) for widget functionality
-
-2. **Windows Path Length**
-   - Local Android builds may fail due to Windows 260-character path limit
-   - Workaround: Use EAS Build for cloud compilation
-
-3. **Offline Support**
+1. **Offline Support**
    - App requires internet connection for data sync
    - No offline caching implemented yet
 
 ### Incomplete Features
 
-- [ ] **Social Features** - Following users, public collections
-- [ ] **Quote Submission** - User-generated quotes pending moderation
 - [ ] **iOS Widget** - Only Android widget implemented
 - [ ] **Push Notifications** - Currently local notifications only
-- [ ] **Multi-language Support** - English only
-
-### Known Bugs
-
-- FlashList `estimatedItemSize` warning (commented out, needs tuning)
-- Occasional type mismatch in `ProfileScreen.tsx` line 223 (`==` typo)
 
 ---
 
@@ -288,5 +274,3 @@ This project is licensed under the MIT License.
 - [react-native-android-widget](https://github.com/nicovalencia/react-native-android-widget) - Android widget support
 
 ---
-
-*Built with ❤️ and AI assistance*
