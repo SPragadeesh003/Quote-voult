@@ -11,6 +11,7 @@ import { useAuth } from '../../src/context/AuthProvider';
 import { Quote } from '../../types/Quote.types';
 import { useTheme } from '../context/ThemeContext';
 import styles from '../styles/HomeScreenStyles';
+import { FONTS } from '@/constants/fonts';
 
 export default function HomeScreen() {
     const { session } = useAuth();
@@ -62,7 +63,6 @@ export default function HomeScreen() {
     };
 
     useEffect(() => {
-        console.log('HomeScreen mounted. Session:', session?.user?.id);
         fetchQuotes();
         fetchDailyPick();
     }, []);
@@ -75,7 +75,6 @@ export default function HomeScreen() {
             if (cachedData) {
                 const { date, quote } = JSON.parse(cachedData);
                 if (date === today) {
-                    console.log('Using cached daily quote');
                     setQuoteOfTheDay(quote);
                     WidgetService.updateDailyQuote(quote.text, quote.author);
                     return;
@@ -134,7 +133,7 @@ export default function HomeScreen() {
             <QuoteOfTheDay quote={quoteOfTheDay} />
 
             <View style={styles.headerTitleRow}>
-                <Text style={[styles.pageTitle, { color: theme.text }]}>For You</Text>
+                <Text style={[styles.pageTitle, { color: theme.text, fontSize: 20, fontFamily: FONTS.GOOGLE_SANS_MEDIUM }]}>For You</Text>
             </View>
         </View>
     );

@@ -26,7 +26,6 @@ export default function SignUpScreen() {
         }
 
         setLoading(true);
-        console.log('[SignUp] Attempting sign up for:', email);
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
@@ -41,12 +40,11 @@ export default function SignUpScreen() {
         if (error) {
             Alert.alert('Sign Up Failed', error.message);
         } else {
-            console.log('[SignUp] Success:', data);
             router.push({
-                pathname: '/auth/email-sent',
+                pathname: '/auth/verify-otp',
                 params: {
-                    title: 'Account Created',
-                    message: 'Please check your email to confirm your account.',
+                    email,
+                    flow: 'signup',
                 },
             });
 

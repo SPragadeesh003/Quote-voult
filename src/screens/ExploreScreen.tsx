@@ -3,6 +3,7 @@ import { useTheme } from '@/src/context/ThemeContext';
 import { Feather, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
 import { Link } from 'expo-router';
+import { X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -26,6 +27,7 @@ export default function Explore() {
     const [searchResults, setSearchResults] = useState<Quote[]>([]);
     const [searching, setSearching] = useState(false);
     const [selectedFilter, setSelectedFilter] = useState<'All' | 'Category' | 'Author'>('All');
+    const [selectedAuthor, setSelectedAuthor] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchCounts = async () => {
@@ -44,10 +46,11 @@ export default function Explore() {
         fetchCounts();
     }, []);
 
-    const handleSearch = async (text: string, filter: string = selectedFilter) => {
+    const handleSearch = async (text: string, filter: string = selectedFilter, author?: string | null) => {
         setSearchQuery(text);
         if (text.length === 0) {
             setSearchResults([]);
+            setSelectedAuthor(null);
             return;
         }
 
@@ -55,7 +58,10 @@ export default function Explore() {
         try {
             let query = supabase.from('quotes').select('*');
 
-            if (filter === 'All') {
+            // If a specific author is selected, filter by exact author
+            if (author) {
+                query = query.eq('author', author);
+            } else if (filter === 'All') {
                 query = query.or(`text.ilike.%${text}%,author.ilike.%${text}%,category.ilike.%${text}%`);
             } else if (filter === 'Category') {
                 query = query.ilike('category', `%${text}%`);
@@ -74,11 +80,24 @@ export default function Explore() {
             setSearching(false);
         }
     };
+
     const toggleFilter = (filter: 'All' | 'Category' | 'Author') => {
         setSelectedFilter(filter);
+        setSelectedAuthor(null);
         if (searchQuery.length > 0) {
-            handleSearch(searchQuery, filter);
+            handleSearch(searchQuery, filter, null);
         }
+    };
+
+    const selectAuthor = (author: string) => {
+        setSelectedAuthor(author);
+        setSelectedFilter('Author');
+        handleSearch(searchQuery, 'Author', author);
+    };
+
+    const clearSelectedAuthor = () => {
+        setSelectedAuthor(null);
+        handleSearch(searchQuery, selectedFilter, null);
     };
 
     return (
@@ -93,37 +112,39 @@ export default function Explore() {
                     <TextInput
                         style={[ExploreScreenStyles.searchInput, { color: colors.text }]}
                         placeholder="Search for topics, moods, authors..."
-                        placeholderTextColor={COLORS.GRAY_DARK}
+                        placeholderTextColor={COLORS.GRAY_888}
                         value={searchQuery}
                         onChangeText={(text) => handleSearch(text)}
                     />
                 </View>
 
-                <View style={ExploreScreenStyles.filterContainer}>
-                    {(['All', 'Category', 'Author'] as const).map((filter) => (
-                        <TouchableOpacity
-                            key={filter}
-                            onPress={() => toggleFilter(filter)}
-                            style={[
-                                ExploreScreenStyles.filterChip,
-                                { borderColor: colors.text },
-                                selectedFilter === filter ? [ExploreScreenStyles.activeFilterChip, { backgroundColor: colors.tint }] : { backgroundColor: colors.cardBackground }
-                            ]}
-                        >
-                            <Text style={[
-                                ExploreScreenStyles.filterText,
-                                { color: colors.text },
-                                selectedFilter === filter && ExploreScreenStyles.activeFilterText
-                            ]}>
-                                {filter}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
+                {searchQuery.length > 0 && (
+                    <View style={ExploreScreenStyles.filterContainer}>
+                        {(['All', 'Category', 'Author'] as const).map((filter) => (
+                            <TouchableOpacity
+                                key={filter}
+                                onPress={() => toggleFilter(filter)}
+                                style={[
+                                    ExploreScreenStyles.filterChip,
+                                    { borderColor: colors.text },
+                                    selectedFilter === filter ? [ExploreScreenStyles.activeFilterChip, { backgroundColor: colors.tint }] : { backgroundColor: colors.cardBackground }
+                                ]}
+                            >
+                                <Text style={[
+                                    ExploreScreenStyles.filterText,
+                                    { color: colors.text },
+                                    selectedFilter === filter && ExploreScreenStyles.activeFilterText
+                                ]}>
+                                    {filter}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                )}
 
-                <View style={ExploreScreenStyles.sectionHeader}>
+                {/* <View style={ExploreScreenStyles.sectionHeader}>
                     <Text style={[ExploreScreenStyles.sectionTitle, { color: colors.text }]}>All Topics</Text>
-                </View>
+                </View> */}
 
                 {searchQuery.length > 0 ? (
                     <View style={{ flex: 1 }}>
@@ -133,19 +154,41 @@ export default function Explore() {
                             contentContainerStyle={{ paddingBottom: 20 }}
                             keyboardShouldPersistTaps="handled"
                             ListHeaderComponent={() => {
-                                const matchingCategories = CATEGORIES.filter(cat =>
+                                const showCategories = selectedFilter !== 'Author';
+                                const showAuthors = selectedFilter !== 'Category';
+
+                                const matchingCategories = showCategories ? CATEGORIES.filter(cat =>
                                     cat.name.toLowerCase().includes(searchQuery.toLowerCase())
-                                );
-                                const matchingAuthors = Array.from(new Set(
+                                ) : [];
+                                const matchingAuthors = showAuthors && !selectedAuthor ? Array.from(new Set(
                                     searchResults
                                         .filter(q => q.author && q.author.toLowerCase().includes(searchQuery.toLowerCase()))
                                         .map(q => q.author)
-                                ));
-
-                                if (matchingCategories.length === 0 && matchingAuthors.length === 0) return null;
+                                )) : [];
 
                                 return (
-                                    <View style={{ marginBottom: 24 }}>
+                                    <View style={{ marginBottom: 16 }}>
+                                        {selectedAuthor && (
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 8 }}>
+                                                <Text style={{ color: colors.text, fontFamily: FONTS.GOOGLE_SANS_MEDIUM, fontSize: 14, opacity: 0.6 }}>Showing quotes by</Text>
+                                                <TouchableOpacity
+                                                    onPress={clearSelectedAuthor}
+                                                    style={{
+                                                        flexDirection: 'row',
+                                                        alignItems: 'center',
+                                                        paddingHorizontal: 12,
+                                                        paddingVertical: 8,
+                                                        backgroundColor: colors.tint,
+                                                        borderRadius: 20,
+                                                        gap: 6,
+                                                    }}
+                                                >
+                                                    <Text style={{ color: COLORS.WHITE, fontFamily: FONTS.GOOGLE_SANS_MEDIUM, fontSize: 13 }}>{selectedAuthor}</Text>
+                                                    <X size={14} color={COLORS.WHITE} strokeWidth={3} />
+                                                </TouchableOpacity>
+                                            </View>
+                                        )}
+
                                         {matchingCategories.length > 0 && (
                                             <>
                                                 <View style={ExploreScreenStyles.sectionHeader}>
@@ -200,14 +243,14 @@ export default function Explore() {
                                                     {matchingAuthors.map((author) => (
                                                         <TouchableOpacity
                                                             key={author}
-                                                            onPress={() => toggleFilter('Author')}
+                                                            onPress={() => selectAuthor(author as string)}
                                                             style={{
                                                                 paddingHorizontal: 16,
                                                                 paddingVertical: 12,
                                                                 backgroundColor: colors.cardBackground,
                                                                 borderRadius: 16,
                                                                 borderWidth: 1,
-                                                                borderColor: colors.text
+                                                                borderColor: colors.tint,
                                                             }}
                                                         >
                                                             <Text style={{ color: colors.text, fontFamily: FONTS.GOOGLE_SANS_MEDIUM }}>{author}</Text>
@@ -217,9 +260,11 @@ export default function Explore() {
                                             </>
                                         )}
 
-                                        <View style={[ExploreScreenStyles.sectionHeader, { marginTop: 24 }]}>
-                                            <Text style={[ExploreScreenStyles.sectionTitle, { color: colors.text }]}>Matching Quotes</Text>
-                                        </View>
+                                        {!selectedAuthor && (matchingCategories.length > 0 || matchingAuthors.length > 0) && (
+                                            <View style={[ExploreScreenStyles.sectionHeader, { marginTop: 24 }]}>
+                                                <Text style={[ExploreScreenStyles.sectionTitle, { color: colors.text }]}>Matching Quotes</Text>
+                                            </View>
+                                        )}
                                     </View>
                                 );
                             }}

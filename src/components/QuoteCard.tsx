@@ -80,7 +80,7 @@ export default function QuoteCard({ quote }: QuoteCardProps) {
 const styles = StyleSheet.create({
     card: {
         borderRadius: 16,
-        marginHorizontal: 24,
+        marginHorizontal: 16,
         marginBottom: 16,
         padding: 16,
     },

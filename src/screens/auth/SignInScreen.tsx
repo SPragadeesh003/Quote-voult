@@ -18,7 +18,6 @@ export default function SignInScreen() {
 
     async function signInWithEmail() {
         setLoading(true);
-        console.log('[SignIn] Attempting sign in for:', email);
         const { data, error } = await supabase.auth.signInWithPassword({
             email,
             password,
@@ -27,7 +26,6 @@ export default function SignInScreen() {
         if (error) {
             Alert.alert('Sign In Failed', error.message);
         } else {
-            console.log('[SignIn] Success:', data);
             router.replace('/(tabs)/home');
         }
         setLoading(false);

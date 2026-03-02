@@ -9,7 +9,7 @@ import 'react-native-reanimated';
 
 import { COLORS } from '@/constants/Colors';
 import { FONT_FILES } from '@/constants/fonts';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useColorScheme } from 'react-native';
 import { AuthProvider, useAuth } from '@/src/context/AuthProvider';
 import { FavoritesProvider } from '@/src/context/FavoritesContext';
 import { ThemeProvider } from '@/src/context/ThemeContext';
@@ -19,7 +19,7 @@ SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
-  const { session, loading } = useAuth();
+  const { session, loading, isRecoverySession } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
@@ -34,11 +34,18 @@ function RootLayoutNav() {
     );
 
     if (!session && !inAuthGroup) {
+      // No session — go to auth
       router.replace('/auth');
+    } else if (session && isRecoverySession) {
+      // Recovery session — force to reset password screen
+      if (!inAuthGroup || segments[1] !== 'reset-password') {
+        router.replace('/auth/reset-password');
+      }
     } else if (session && inAuthGroup && !isAllowedAuthPage) {
+      // Normal session — go to home
       router.replace('/(tabs)/home');
     }
-  }, [session, loading, segments]);
+  }, [session, loading, segments, isRecoverySession]);
 
   if (loading) {
     return (

@@ -172,17 +172,17 @@ const AnimatedBottomSheetModal: React.FC<AnimatedBottomSheetModalProps> = ({
                     >
                         <Pressable style={{ flex: 1 }} onPress={closeModal} />
                     </Animated.View>
-                    <GestureDetector gesture={panGesture}>
-                        <Animated.View
-                            style={[
-                                styles?.sheetContainer || defaultStyles.sheetContainer,
-                                animatedStyle,
-                            ]}
-                        >
+                    <Animated.View
+                        style={[
+                            styles?.sheetContainer || defaultStyles.sheetContainer,
+                            animatedStyle,
+                        ]}
+                    >
+                        <GestureDetector gesture={panGesture}>
                             <View style={styles?.modalHandle || defaultStyles.modalHandle} />
-                            {children}
-                        </Animated.View>
-                    </GestureDetector>
+                        </GestureDetector>
+                        {children}
+                    </Animated.View>
                 </View>
             </KeyboardWrapper>
         </Modal>

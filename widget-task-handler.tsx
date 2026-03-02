@@ -29,7 +29,7 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
                     const parsed = JSON.parse(storedData);
                     if (parsed.quote) quote = parsed.quote;
                     if (parsed.author) author = parsed.author;
-                    console.log('Widget Task Handler - Loaded data:', { quote, author, parsed });
+                    // console.log('Widget Task Handler - Loaded data:', { quote, author, parsed });
                 }
             } catch (e) {
                 console.error('Error retrieving widget data', e);

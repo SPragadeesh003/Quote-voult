@@ -1,21 +1,26 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Session } from '@supabase/supabase-js';
 import * as Linking from 'expo-linking';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../../config/supabaseConfig';
 
+const RECOVERY_FLAG_KEY = '@quickvault_recovery_session';
+
 type AuthContextType = {
   loading: boolean;
   session: Session | null;
+  isRecoverySession: boolean;
   signOut: () => Promise<void>;
 };
 
-const AuthContext = createContext<AuthContextType>({ session: null, loading: true, signOut: async () => { } });
+const AuthContext = createContext<AuthContextType>({ session: null, loading: true, isRecoverySession: false, signOut: async () => { } });
 
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isRecoverySession, setIsRecoverySession] = useState(false);
 
   useEffect(() => {
     const handleDeepLink = async (url: string | null) => {
@@ -44,6 +49,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const initAuth = async () => {
       try {
+        // Check if there's a persisted recovery flag (survives app restart)
+        const recoveryFlag = await AsyncStorage.getItem(RECOVERY_FLAG_KEY);
+        if (recoveryFlag === 'true') {
+          setIsRecoverySession(true);
+        }
+
         const initialUrl = await Linking.getInitialURL();
         if (initialUrl && (initialUrl.includes('access_token') || initialUrl.includes('refresh_token'))) {
           await handleDeepLink(initialUrl);
@@ -60,8 +71,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     initAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecoverySession(true);
+        AsyncStorage.setItem(RECOVERY_FLAG_KEY, 'true');
+      } else if (event === 'SIGNED_OUT') {
+        setIsRecoverySession(false);
+        AsyncStorage.removeItem(RECOVERY_FLAG_KEY);
+      }
     });
 
     const handleUrlEvent = ({ url }: { url: string }) => {
@@ -80,11 +98,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signOut = async () => {
+    setIsRecoverySession(false);
+    await AsyncStorage.removeItem(RECOVERY_FLAG_KEY);
     await supabase.auth.signOut();
   };
 
   return (
-    <AuthContext.Provider value={{ session, loading, signOut }}>
+    <AuthContext.Provider value={{ session, loading, isRecoverySession, signOut }}>
       {children}
     </AuthContext.Provider>
   );

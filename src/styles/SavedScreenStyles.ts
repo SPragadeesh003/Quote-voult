@@ -161,12 +161,13 @@ export const SavedScreenStyles = StyleSheet.create({
     },
     modalTitle: {
         fontSize: 20,
-        fontWeight: 'bold',
+        fontFamily: FONTS.GOOGLE_SANS_BOLD,
     },
     input: {
         padding: 16,
         borderRadius: 16,
         fontSize: 16,
+        fontFamily: FONTS.GOOGLE_SANS_REGULAR,
     },
     createButton: {
         padding: 16,
@@ -176,8 +177,68 @@ export const SavedScreenStyles = StyleSheet.create({
     createButtonText: {
         color: COLORS.WHITE,
         fontSize: 16,
-        fontWeight: 'bold',
-    }
+        fontFamily: FONTS.GOOGLE_SANS_BOLD,
+    },
+    modalSubtitle: {
+        fontSize: 14,
+        fontFamily: FONTS.GOOGLE_SANS_MEDIUM,
+        opacity: 0.6,
+        marginBottom: 8,
+    },
+    collectionRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 14,
+        borderBottomWidth: 0.5,
+    },
+    collectionRowIcon: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 14,
+    },
+    collectionRowName: {
+        flex: 1,
+        fontSize: 16,
+        fontFamily: FONTS.GOOGLE_SANS_MEDIUM,
+    },
+    alreadySavedBadge: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    dividerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginVertical: 16,
+    },
+    dividerLine: {
+        flex: 1,
+        height: 1,
+    },
+    dividerText: {
+        marginHorizontal: 12,
+        fontSize: 13,
+        fontFamily: FONTS.GOOGLE_SANS_REGULAR,
+    },
+    createNewButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 16,
+        borderRadius: 16,
+        borderWidth: 1.5,
+        borderStyle: 'dashed',
+        gap: 8,
+    },
+    createNewButtonText: {
+        fontSize: 15,
+        fontFamily: FONTS.GOOGLE_SANS_MEDIUM,
+    },
 });
 
 export default SavedScreenStyles;

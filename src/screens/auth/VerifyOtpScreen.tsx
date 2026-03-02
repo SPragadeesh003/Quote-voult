@@ -1,8 +1,8 @@
 import { COLORS } from '@/constants/Colors';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, KeyRound } from 'lucide-react-native';
-import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, BackHandler, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../../config/supabaseConfig';
 import { authStyles } from '../../styles/authStyles';
@@ -11,9 +11,18 @@ import KeyboardWrapper from '@/src/components/KeyboardWrapper';
 
 export default function VerifyOtpScreen() {
     const router = useRouter();
-    const { email } = useLocalSearchParams<{ email: string }>();
+    const { email, flow } = useLocalSearchParams<{ email: string; flow?: string }>();
     const [otp, setOtp] = useState('');
     const [loading, setLoading] = useState(false);
+
+    const otpType = flow === 'signup' ? 'signup' : 'recovery';
+
+    // Block Android hardware back button during reset flow
+    useEffect(() => {
+        if (flow !== 'reset') return;
+        const handler = BackHandler.addEventListener('hardwareBackPress', () => true);
+        return () => handler.remove();
+    }, [flow]);
 
     async function verifyOtp() {
         if (!otp || otp.length < 6) {
@@ -25,13 +34,23 @@ export default function VerifyOtpScreen() {
         const { data, error } = await supabase.auth.verifyOtp({
             email,
             token: otp,
-            type: 'email',
+            type: otpType,
         });
 
         if (error) {
             Alert.alert('Verification Failed', error.message);
         } else {
-            router.replace('/auth/reset-password');
+            if (flow === 'signup') {
+                router.replace({
+                    pathname: '/auth/email-sent',
+                    params: {
+                        title: 'Account Created Successfully',
+                        message: 'Your email has been verified. Welcome to QuoteVault!',
+                    },
+                });
+            } else {
+                router.replace('/auth/reset-password');
+            }
         }
         setLoading(false);
     }
@@ -40,9 +59,12 @@ export default function VerifyOtpScreen() {
         <SafeAreaView style={authStyles.globalContainer}>
             <KeyboardWrapper>
                 <View style={authStyles.container}>
-                    <TouchableOpacity onPress={() => router.back()} style={authStyles.backButton}>
-                        <ArrowLeft size={24} color={COLORS.text} />
-                    </TouchableOpacity>
+                    {/* Only show back button for signup flow — reset flow must not be escapable */}
+                    {flow !== 'reset' && (
+                        <TouchableOpacity onPress={() => router.back()} style={authStyles.backButton}>
+                            <ArrowLeft size={24} color={COLORS.text} />
+                        </TouchableOpacity>
+                    )}
 
                     <View style={authStyles.screenHeader}>
                         <Text style={authStyles.screenTitle}>Enter Code</Text>

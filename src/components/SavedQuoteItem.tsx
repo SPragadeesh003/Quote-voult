@@ -51,7 +51,7 @@ export default function SavedQuoteItem({
             <TouchableOpacity
                 activeOpacity={isSelectionMode ? 0.8 : 1}
                 onPress={handlePress}
-                style={[styles.card, { backgroundColor: theme.tint }, isSelected && styles.selectedCard]}
+                style={[styles.card, { backgroundColor: theme.tint, borderWidth: 3, borderColor: isSelected ? COLORS.WHITE : 'transparent' }]}
             >
                 <View style={styles.watermarkContainer}>
                     <QuoteIcon size={120} color="rgba(255,255,255,0.1)" fill="rgba(255,255,255,0.1)" />
@@ -109,10 +109,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         position: 'relative',
     },
-    selectedCard: {
-        borderWidth: 3,
-        borderColor: COLORS.WHITE,
-    },
+
     checkbox: {
         position: 'absolute',
         top: 20,

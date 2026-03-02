@@ -5,17 +5,19 @@ import { useTheme } from '@/src/context/ThemeContext';
 import { Quote } from '@/types/Quote.types';
 import { Check, Plus } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import AnimatedBottomSheetModal from './AnimatedBottomSheetModal';
 import { FONTS } from '@/constants/fonts';
 
 interface ManageCollectionsSheetProps {
     isVisible: boolean;
     onClose: () => void;
-    quote: Quote | null;
+    quote?: Quote | null;
+    quoteIds?: string[];
+    onDone?: () => void;
 }
 
-export default function ManageCollectionsSheet({ isVisible, onClose, quote }: ManageCollectionsSheetProps) {
+export default function ManageCollectionsSheet({ isVisible, onClose, quote, quoteIds, onDone }: ManageCollectionsSheetProps) {
     const { theme, isDarkMode } = useTheme();
     const { session } = useAuth();
     const [collections, setCollections] = useState<any[]>([]);
@@ -25,14 +27,19 @@ export default function ManageCollectionsSheet({ isVisible, onClose, quote }: Ma
     const [newCollectionName, setNewCollectionName] = useState('');
     const [showCreateInput, setShowCreateInput] = useState(false);
 
+    // Resolve effective quote IDs from either prop
+    const effectiveQuoteIds = quoteIds && quoteIds.length > 0 ? quoteIds : quote ? [quote.id] : [];
+
     useEffect(() => {
-        if (isVisible && quote && session?.user) {
+        if (isVisible && effectiveQuoteIds.length > 0 && session?.user) {
             fetchCollectionsAndSelection();
+            setShowCreateInput(false);
+            setNewCollectionName('');
         }
-    }, [isVisible, quote, session]);
+    }, [isVisible, quote, quoteIds, session]);
 
     const fetchCollectionsAndSelection = async () => {
-        if (!session?.user || !quote) return;
+        if (!session?.user || effectiveQuoteIds.length === 0) return;
         setLoading(true);
         try {
             const { data: collectionsData, error: collectionsError } = await supabase
@@ -44,16 +51,32 @@ export default function ManageCollectionsSheet({ isVisible, onClose, quote }: Ma
             if (collectionsError) throw collectionsError;
             setCollections(collectionsData || []);
 
+            // Fetch which collections already contain ALL the quote(s)
             const { data: itemsData, error: itemsError } = await supabase
                 .from('collection_items')
-                .select('collection_id')
-                .eq('quote_id', quote.id);
+                .select('collection_id, quote_id')
+                .in('quote_id', effectiveQuoteIds);
 
             if (itemsError) throw itemsError;
 
-            const ids = itemsData?.map((item: any) => item.collection_id) || [];
-            setSelectedCollectionIds(ids);
-
+            if (effectiveQuoteIds.length === 1) {
+                // Single quote: simple list of collection IDs
+                const ids = itemsData?.map((item: any) => item.collection_id) || [];
+                setSelectedCollectionIds(ids);
+            } else {
+                // Multiple quotes: only mark collections that contain ALL selected quotes
+                const collectionQuoteMap: Record<string, Set<string>> = {};
+                itemsData?.forEach((item: any) => {
+                    if (!collectionQuoteMap[item.collection_id]) {
+                        collectionQuoteMap[item.collection_id] = new Set();
+                    }
+                    collectionQuoteMap[item.collection_id].add(item.quote_id);
+                });
+                const fullyContainedIds = Object.entries(collectionQuoteMap)
+                    .filter(([_, quoteSet]) => effectiveQuoteIds.every(id => quoteSet.has(id)))
+                    .map(([collectionId]) => collectionId);
+                setSelectedCollectionIds(fullyContainedIds);
+            }
         } catch (error) {
             console.error('Error fetching collections for sheet:', error);
         } finally {
@@ -62,7 +85,7 @@ export default function ManageCollectionsSheet({ isVisible, onClose, quote }: Ma
     };
 
     const toggleCollection = async (collectionId: string) => {
-        if (!quote) return;
+        if (effectiveQuoteIds.length === 0) return;
 
         const isSelected = selectedCollectionIds.includes(collectionId);
         setSelectedCollectionIds(prev =>
@@ -71,17 +94,34 @@ export default function ManageCollectionsSheet({ isVisible, onClose, quote }: Ma
 
         try {
             if (isSelected) {
-                const { error } = await supabase
-                    .from('collection_items')
-                    .delete()
-                    .eq('collection_id', collectionId)
-                    .eq('quote_id', quote.id);
-                if (error) throw error;
+                // Remove quote(s) from collection
+                for (const qId of effectiveQuoteIds) {
+                    const { error } = await supabase
+                        .from('collection_items')
+                        .delete()
+                        .eq('collection_id', collectionId)
+                        .eq('quote_id', qId);
+                    if (error) throw error;
+                }
             } else {
-                const { error } = await supabase
+                // Add quote(s) to collection (skip duplicates)
+                const { data: existingItems } = await supabase
                     .from('collection_items')
-                    .insert({ collection_id: collectionId, quote_id: quote.id });
-                if (error) throw error;
+                    .select('quote_id')
+                    .eq('collection_id', collectionId)
+                    .in('quote_id', effectiveQuoteIds);
+
+                const existingSet = new Set(existingItems?.map((i: any) => i.quote_id) || []);
+                const newItems = effectiveQuoteIds
+                    .filter(qId => !existingSet.has(qId))
+                    .map(qId => ({ collection_id: collectionId, quote_id: qId }));
+
+                if (newItems.length > 0) {
+                    const { error } = await supabase
+                        .from('collection_items')
+                        .insert(newItems);
+                    if (error) throw error;
+                }
             }
         } catch (error) {
             console.error('Error toggling collection:', error);
@@ -92,8 +132,13 @@ export default function ManageCollectionsSheet({ isVisible, onClose, quote }: Ma
         }
     };
 
+    const handleDone = () => {
+        onDone?.();
+        onClose();
+    };
+
     const createCollection = async () => {
-        if (!newCollectionName.trim() || !session?.user || !quote) return;
+        if (!newCollectionName.trim() || !session?.user || effectiveQuoteIds.length === 0) return;
         setCreating(true);
         try {
             const { data: collectionData, error: collectionError } = await supabase
@@ -107,9 +152,14 @@ export default function ManageCollectionsSheet({ isVisible, onClose, quote }: Ma
 
             if (collectionError) throw collectionError;
 
+            const quotesToInsert = effectiveQuoteIds.map(qId => ({
+                collection_id: collectionData.id,
+                quote_id: qId,
+            }));
+
             const { error: itemError } = await supabase
                 .from('collection_items')
-                .insert({ collection_id: collectionData.id, quote_id: quote.id });
+                .insert(quotesToInsert);
 
             if (itemError) throw itemError;
 
@@ -126,68 +176,80 @@ export default function ManageCollectionsSheet({ isVisible, onClose, quote }: Ma
 
     return (
         <AnimatedBottomSheetModal isVisible={isVisible} onClose={onClose}>
-            <View style={styles.content}>
-                <View style={styles.header}>
+            <ScrollView style={{ maxHeight: 450 }} showsVerticalScrollIndicator={false}>
+                <View style={styles.content}>
                     <Text style={[styles.title, { color: theme.text }]}>Save to Collection</Text>
-                    <TouchableOpacity onPress={() => setShowCreateInput(!showCreateInput)}>
-                        <Plus size={24} color={theme.tint} />
-                    </TouchableOpacity>
-                </View>
 
-                {showCreateInput && (
-                    <View style={styles.createContainer}>
-                        <TextInput
-                            style={[styles.input, { color: theme.text, backgroundColor: isDarkMode ? COLORS.DARK_CARD : COLORS.GRAY_LIGHT, flex: 1 }]}
-                            placeholder="New Collection Name"
-                            placeholderTextColor={COLORS.GRAY_MEDIUM}
-                            value={newCollectionName}
-                            onChangeText={setNewCollectionName}
-                            autoFocus
-                        />
-                        <TouchableOpacity
-                            style={[styles.createButton, { backgroundColor: theme.tint }]}
-                            onPress={createCollection}
-                            disabled={creating}
-                        >
-                            {creating ? <ActivityIndicator color={COLORS.WHITE} /> : <Check size={20} color={COLORS.WHITE} />}
-                        </TouchableOpacity>
+                    {loading ? (
+                        <ActivityIndicator size="large" color={theme.tint} style={{ margin: 20 }} />
+                    ) : collections.length === 0 ? (
+                        <Text style={[styles.emptyText, { color: theme.text }]}>No collections yet.</Text>
+                    ) : (
+                        <View style={{ marginBottom: 8 }}>
+                            {collections.map((item) => {
+                                const isSelected = selectedCollectionIds.includes(item.id);
+                                return (
+                                    <TouchableOpacity
+                                        key={item.id}
+                                        style={[styles.collectionRow, { borderBottomColor: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}
+                                        onPress={() => toggleCollection(item.id)}
+                                    >
+                                        <View style={[styles.collectionIcon, { backgroundColor: theme.tint }]}>
+                                            <Text style={styles.collectionIconText}>{item.name.charAt(0).toUpperCase()}</Text>
+                                        </View>
+                                        <Text style={[styles.collectionName, { color: theme.text }]}>{item.name}</Text>
+                                        {isSelected && (
+                                            <View style={[styles.checkBadge, { backgroundColor: theme.tint }]}>
+                                                <Check size={14} color={COLORS.WHITE} strokeWidth={3} />
+                                            </View>
+                                        )}
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </View>
+                    )}
+
+                    <View style={styles.dividerContainer}>
+                        <View style={[styles.dividerLine, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }]} />
+                        <Text style={[styles.dividerText, { color: COLORS.GRAY_MEDIUM }]}>or</Text>
+                        <View style={[styles.dividerLine, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }]} />
                     </View>
-                )}
 
-                {loading ? (
-                    <ActivityIndicator size="large" color={theme.tint} style={{ margin: 20 }} />
-                ) : (
-                    <FlatList
-                        data={collections}
-                        keyExtractor={item => item.id}
-                        contentContainerStyle={{ paddingBottom: 20 }}
-                        ListEmptyComponent={
-                            !loading && <Text style={{ color: theme.text, opacity: 0.6, textAlign: 'center', marginTop: 20 }}>No collections found.</Text>
-                        }
-                        renderItem={({ item }) => {
-                            const isSelected = selectedCollectionIds.includes(item.id);
-                            return (
-                                <TouchableOpacity
-                                    style={[styles.item, { borderBottomColor: theme.text }]}
-                                    onPress={() => toggleCollection(item.id)}
-                                >
-                                    <View style={[styles.checkbox, { borderColor: theme.text, backgroundColor: isSelected ? theme.tint : 'transparent', borderWidth: isSelected ? 0 : 2 }]}>
-                                        {isSelected && <Check size={14} color={COLORS.WHITE} strokeWidth={3} />}
-                                    </View>
-                                    <Text style={[styles.itemText, { color: theme.text }]}>{item.name}</Text>
-                                </TouchableOpacity>
-                            );
-                        }}
-                    />
-                )}
+                    {showCreateInput ? (
+                        <View style={styles.createContainer}>
+                            <TextInput
+                                style={[styles.input, { color: theme.text, backgroundColor: isDarkMode ? COLORS.DARK_CARD : COLORS.GRAY_LIGHT, flex: 1 }]}
+                                placeholder="New Collection Name"
+                                placeholderTextColor={COLORS.GRAY_MEDIUM}
+                                value={newCollectionName}
+                                onChangeText={setNewCollectionName}
+                                autoFocus
+                            />
+                            <TouchableOpacity
+                                style={[styles.createButton, { backgroundColor: theme.tint, opacity: newCollectionName.trim() ? 1 : 0.5 }]}
+                                onPress={createCollection}
+                                disabled={creating || !newCollectionName.trim()}
+                            >
+                                {creating ? <ActivityIndicator color={COLORS.WHITE} /> : <Check size={20} color={COLORS.WHITE} />}
+                            </TouchableOpacity>
+                        </View>
+                    ) : (
+                        <TouchableOpacity
+                            style={[styles.createNewButton, { borderColor: theme.tint }]}
+                            onPress={() => setShowCreateInput(true)}
+                        >
+                            <Plus size={20} color={theme.tint} />
+                            <Text style={[styles.createNewButtonText, { color: theme.tint }]}>Create New Collection</Text>
+                        </TouchableOpacity>
+                    )}
 
-                {selectedCollectionIds.length > 0 && (
-                    <TouchableOpacity onPress={onClose} style={[styles.doneButton, { backgroundColor: theme.tint }]}>
-                        <Text style={styles.doneButtonText}>Done</Text>
-                    </TouchableOpacity>
-                )}
-
-            </View>
+                    {selectedCollectionIds.length > 0 && (
+                        <TouchableOpacity onPress={handleDone} style={[styles.doneButton, { backgroundColor: theme.tint }]}>
+                            <Text style={styles.doneButtonText}>Done</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
+            </ScrollView>
         </AnimatedBottomSheetModal>
     );
 }
@@ -195,26 +257,73 @@ export default function ManageCollectionsSheet({ isVisible, onClose, quote }: Ma
 const styles = StyleSheet.create({
     content: {
         paddingHorizontal: 20,
+        paddingBottom: 20,
         minHeight: 200,
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 20,
     },
     title: {
         fontSize: 20,
+        fontFamily: FONTS.GOOGLE_SANS_BOLD,
+        marginBottom: 16,
+    },
+    emptyText: {
+        opacity: 0.6,
+        textAlign: 'center',
+        marginVertical: 20,
+        fontFamily: FONTS.GOOGLE_SANS_REGULAR,
+    },
+    collectionRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 14,
+        borderBottomWidth: 0.5,
+    },
+    collectionIcon: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 14,
+    },
+    collectionIconText: {
+        color: COLORS.WHITE,
+        fontSize: 14,
+        fontFamily: FONTS.GOOGLE_SANS_BOLD,
+    },
+    collectionName: {
+        flex: 1,
+        fontSize: 16,
         fontFamily: FONTS.GOOGLE_SANS_MEDIUM,
+    },
+    checkBadge: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    dividerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginVertical: 16,
+    },
+    dividerLine: {
+        flex: 1,
+        height: 1,
+    },
+    dividerText: {
+        marginHorizontal: 12,
+        fontSize: 13,
+        fontFamily: FONTS.GOOGLE_SANS_REGULAR,
     },
     createContainer: {
         flexDirection: 'row',
-        marginBottom: 20,
         gap: 10,
     },
     input: {
         padding: 12,
         borderRadius: 12,
+        fontFamily: FONTS.GOOGLE_SANS_REGULAR,
     },
     createButton: {
         width: 48,
@@ -223,23 +332,19 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    item: {
+    createNewButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 16,
-        borderBottomWidth: 0.5,
-    },
-    checkbox: {
-        width: 24,
-        height: 24,
-        borderRadius: 6,
-        marginRight: 16,
         justifyContent: 'center',
-        alignItems: 'center',
+        paddingVertical: 16,
+        borderRadius: 16,
+        borderWidth: 1.5,
+        borderStyle: 'dashed',
+        gap: 8,
     },
-    itemText: {
-        fontSize: 16,
-        fontFamily: FONTS.GOOGLE_SANS_REGULAR,
+    createNewButtonText: {
+        fontSize: 15,
+        fontFamily: FONTS.GOOGLE_SANS_MEDIUM,
     },
     doneButton: {
         marginTop: 20,
@@ -253,5 +358,5 @@ const styles = StyleSheet.create({
         color: COLORS.WHITE,
         fontSize: 16,
         fontFamily: FONTS.GOOGLE_SANS_MEDIUM,
-    }
+    },
 });

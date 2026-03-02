@@ -27,19 +27,14 @@ export default function ForgotPasswordScreen() {
         }
 
         setLoading(true);
-        const { error } = await supabase.auth.signInWithOtp({
-            email,
-            options: {
-                shouldCreateUser: false,
-            }
-        });
+        const { error } = await supabase.auth.resetPasswordForEmail(email);
 
         if (error) {
             Alert.alert('Error', error.message);
         } else {
             router.push({
                 pathname: '/auth/verify-otp',
-                params: { email },
+                params: { email, flow: 'reset' },
             });
         }
         setLoading(false);

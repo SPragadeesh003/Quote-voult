@@ -43,7 +43,6 @@ export const BoldTemplate = ({ quote, fontSizeScale = 1 }: TemplateProps) => (
             <Text style={[styles.boldText, { fontSize: 28 * fontSizeScale, lineHeight: 34 * fontSizeScale }]}>{quote.text.toUpperCase()}</Text>
             <Text style={styles.boldAuthor}>{quote.author}</Text>
         </View>
-        <View style={styles.boldAccent} />
         <Text style={[styles.watermark, { color: COLORS.BLACK }]}>QuickVault</Text>
     </View>
 );
@@ -79,13 +78,11 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     watermark: {
-        position: 'absolute',
-        bottom: 12,
+        bottom: 0,
         fontSize: 10,
         color: COLORS.GRAY_MEDIUM,
         fontFamily: FONTS.GOOGLE_SANS_MEDIUM,
         letterSpacing: 1,
-        zIndex: 10,
     },
     classicContainer: {
         backgroundColor: COLORS.CLASSIC_CREAM,

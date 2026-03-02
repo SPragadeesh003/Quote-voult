@@ -1,8 +1,8 @@
 import { COLORS } from '@/constants/Colors';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Lock } from 'lucide-react-native';
-import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Lock } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, BackHandler, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../../config/supabaseConfig';
 import { authStyles } from '../../styles/authStyles';
@@ -14,6 +14,12 @@ export default function ResetPasswordScreen() {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
+
+    // Block Android hardware back button — password reset must be completed
+    useEffect(() => {
+        const handler = BackHandler.addEventListener('hardwareBackPress', () => true);
+        return () => handler.remove();
+    }, []);
 
     const handleUpdatePassword = async () => {
         if (!password || !confirmPassword) {
@@ -37,7 +43,9 @@ export default function ResetPasswordScreen() {
         if (error) {
             Alert.alert('Error', error.message);
         } else {
-            Alert.alert('Success', 'Your password has been updated!', [
+            // Sign out to clear the recovery session, then redirect to sign-in
+            await supabase.auth.signOut();
+            Alert.alert('Success', 'Your password has been updated! Please sign in with your new password.', [
                 {
                     text: 'OK',
                     onPress: () => {
@@ -53,9 +61,7 @@ export default function ResetPasswordScreen() {
         <SafeAreaView style={authStyles.globalContainer}>
             <KeyboardWrapper>
                 <View style={authStyles.container}>
-                    <TouchableOpacity onPress={() => router.back()} style={authStyles.backButton}>
-                        <ArrowLeft size={24} color={COLORS.text} />
-                    </TouchableOpacity>
+                    {/* Back button removed — password reset must be completed */}
 
                     <View style={authStyles.screenHeader}>
                         <Text style={authStyles.screenTitle}>New Password</Text>

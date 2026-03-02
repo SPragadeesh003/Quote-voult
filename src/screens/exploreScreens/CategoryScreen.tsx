@@ -93,7 +93,7 @@ export default function CategoryScreen() {
                     <TextInput
                         style={[CategoryScreenStyles.searchInput, { color: theme.text }]}
                         placeholder="Search in this category..."
-                        placeholderTextColor={COLORS.text}
+                        placeholderTextColor={COLORS.GRAY_888}
                         value={searchQuery}
                         onChangeText={handleSearch}
                     />

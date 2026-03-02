@@ -4,9 +4,9 @@ import { useAuth } from '@/src/context/AuthProvider';
 import { useTheme } from '@/src/context/ThemeContext';
 import { FlashList } from '@shopify/flash-list';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { Plus } from 'lucide-react-native';
+import { Check, Plus } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, RefreshControl, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../config/supabaseConfig';
 import AnimatedBottomSheetModal from '../../src/components/AnimatedBottomSheetModal';
@@ -35,6 +35,7 @@ export default function Saved() {
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [newCollectionName, setNewCollectionName] = useState('');
     const [creating, setCreating] = useState(false);
+    const [isBatchCollectionSheetVisible, setIsBatchCollectionSheetVisible] = useState(false);
 
     const fetchFavorites = async () => {
         if (!session?.user) return;
@@ -122,61 +123,35 @@ export default function Saved() {
             Alert.alert('Empty Selection', 'Please select at least one quote.');
             return;
         }
-        setEditingCollectionId(null);
-        setNewCollectionName('');
-        setIsModalVisible(true);
+        setIsBatchCollectionSheetVisible(true);
     };
 
-    const handleCreateOrUpdateCollection = async () => {
-        if (!newCollectionName.trim() || !session?.user) return;
+    const handleRenameCollection = async () => {
+        if (!newCollectionName.trim() || !session?.user || !editingCollectionId) return;
         setCreating(true);
-
         try {
-            if (editingCollectionId) {
-                // UPDATE (Rename)
-                const { error } = await supabase
-                    .from('collections')
-                    .update({ name: newCollectionName.trim() })
-                    .eq('id', editingCollectionId);
+            const { error } = await supabase
+                .from('collections')
+                .update({ name: newCollectionName.trim() })
+                .eq('id', editingCollectionId);
 
-                if (error) throw error;
-                Alert.alert('Success', 'Collection renamed.');
-            } else {
-                const { data: collectionData, error: collectionError } = await supabase
-                    .from('collections')
-                    .insert({
-                        name: newCollectionName.trim(),
-                        user_id: session.user.id
-                    })
-                    .select()
-                    .single();
-
-                if (collectionError) throw collectionError;
-                const quotesToInsert = selectedQuoteIds.map(quoteId => ({
-                    collection_id: collectionData.id,
-                    quote_id: quoteId
-                }));
-
-                const { error: itemsError } = await supabase
-                    .from('collection_items')
-                    .insert(quotesToInsert);
-
-                if (itemsError) throw itemsError;
-                Alert.alert('Success', 'Collection created successfully!');
-            }
+            if (error) throw error;
+            Alert.alert('Success', 'Collection renamed.');
             setIsModalVisible(false);
             setNewCollectionName('');
             setEditingCollectionId(null);
-            setIsSelectionMode(false);
-            setSelectedQuoteIds([]);
             fetchCollections();
-            if (!editingCollectionId) setActiveTab('collections');
-
         } catch (e: any) {
-            Alert.alert('Error', e.message || 'Failed to save collection');
+            Alert.alert('Error', e.message || 'Failed to rename collection');
         } finally {
             setCreating(false);
         }
+    };
+
+    const handleBatchCollectionDone = () => {
+        setIsSelectionMode(false);
+        setSelectedQuoteIds([]);
+        fetchCollections();
     };
 
     const handleDeleteCollection = (collectionId: string) => {
@@ -279,6 +254,8 @@ export default function Saved() {
                                         onManageCollections={openManageSheet}
                                     />
                                 )}
+                                extraData={[selectedQuoteIds, isSelectionMode]}
+                                // estimatedItemSize={200}
                                 contentContainerStyle={SavedScreenStyles.listContent}
                                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                                 ListEmptyComponent={
@@ -289,13 +266,13 @@ export default function Saved() {
                             />
                             {isSelectionMode && (
                                 <View style={[SavedScreenStyles.bottomBar, { backgroundColor: theme.cardBackground, borderTopColor: theme.text }]}>
-                                    <Text style={{ color: theme.text }}>{selectedQuoteIds.length} Selected</Text>
+                                    <Text style={{ color: theme.text, fontFamily: FONTS.GOOGLE_SANS_MEDIUM, fontSize: 15 }}>{selectedQuoteIds.length} Selected</Text>
                                     <TouchableOpacity
                                         style={[SavedScreenStyles.nextButton, { backgroundColor: theme.tint, opacity: selectedQuoteIds.length > 0 ? 1 : 0.5 }]}
                                         onPress={() => openNameModal()}
                                         disabled={selectedQuoteIds.length === 0}
                                     >
-                                        <Text style={{ color: COLORS.WHITE, fontWeight: 'bold' }}>Next</Text>
+                                        <Text style={{ color: COLORS.WHITE, fontFamily: FONTS.GOOGLE_SANS_BOLD, fontSize: 15 }}>Next</Text>
                                     </TouchableOpacity>
                                 </View>
                             )}
@@ -308,11 +285,9 @@ export default function Saved() {
                             contentContainerStyle={SavedScreenStyles.listContent}
                             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                             ListEmptyComponent={
-                                myCollections.length === 0 ? null : (
-                                    <View style={SavedScreenStyles.emptyState}>
-                                        <Text style={{ color: theme.text, opacity: 0.6, fontFamily: FONTS.GOOGLE_SANS_MEDIUM }}>No collections directly created yet.</Text>
-                                    </View>
-                                )
+                                <View style={SavedScreenStyles.emptyState}>
+                                    <Text style={{ color: theme.text, opacity: 0.6, fontFamily: FONTS.GOOGLE_SANS_MEDIUM }}>No collections yet. Tap + to create one.</Text>
+                                </View>
                             }
                         />
                     )}
@@ -320,34 +295,43 @@ export default function Saved() {
             )}
 
             <AnimatedBottomSheetModal isVisible={isModalVisible} onClose={() => setIsModalVisible(false)} children={
-                <View style={SavedScreenStyles.modalContent}>
-                    <Text style={[SavedScreenStyles.modalTitle, { color: theme.text }]}>Name your collection</Text>
-                    <TextInput
-                        style={[SavedScreenStyles.input, { color: theme.text, backgroundColor: isDarkMode ? COLORS.DARK_CARD : COLORS.GRAY_LIGHTER }]}
-                        placeholder="Collection Name"
-                        placeholderTextColor={COLORS.GRAY_999}
-                        value={newCollectionName}
-                        onChangeText={setNewCollectionName}
-                        autoFocus
-                    />
-                    <TouchableOpacity
-                        style={[SavedScreenStyles.createButton, { backgroundColor: theme.tint }]}
-                        onPress={handleCreateOrUpdateCollection}
-                        disabled={creating}
-                    >
-                        {creating ? (
-                            <ActivityIndicator color={COLORS.WHITE} />
-                        ) : (
-                            <Text style={SavedScreenStyles.createButtonText}>{editingCollectionId ? 'Update' : 'Create'} Collection</Text>
-                        )}
-                    </TouchableOpacity>
-                </View>
+                <ScrollView style={{ maxHeight: 450 }} showsVerticalScrollIndicator={false} bounces={false}>
+                    <View style={SavedScreenStyles.modalContent}>
+                        <Text style={[SavedScreenStyles.modalTitle, { color: theme.text }]}>Rename Collection</Text>
+                        <TextInput
+                            style={[SavedScreenStyles.input, { color: theme.text, backgroundColor: isDarkMode ? COLORS.DARK_CARD : COLORS.GRAY_LIGHTER }]}
+                            placeholder="Collection Name"
+                            placeholderTextColor={COLORS.GRAY_999}
+                            value={newCollectionName}
+                            onChangeText={setNewCollectionName}
+                            autoFocus
+                        />
+                        <TouchableOpacity
+                            style={[SavedScreenStyles.createButton, { backgroundColor: theme.tint }]}
+                            onPress={handleRenameCollection}
+                            disabled={creating}
+                        >
+                            {creating ? (
+                                <ActivityIndicator color={COLORS.WHITE} />
+                            ) : (
+                                <Text style={SavedScreenStyles.createButtonText}>Update Collection</Text>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                </ScrollView>
             } />
 
             <ManageCollectionsSheet
                 isVisible={isManageSheetVisible}
                 onClose={() => setIsManageSheetVisible(false)}
                 quote={manageQuote}
+            />
+
+            <ManageCollectionsSheet
+                isVisible={isBatchCollectionSheetVisible}
+                onClose={() => setIsBatchCollectionSheetVisible(false)}
+                quoteIds={selectedQuoteIds}
+                onDone={handleBatchCollectionDone}
             />
         </SafeAreaView>
     );

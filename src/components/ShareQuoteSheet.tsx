@@ -67,7 +67,12 @@ export default function ShareQuoteSheet({ isVisible, onClose, quote }: ShareQuot
 
     return (
         <AnimatedBottomSheetModal isVisible={isVisible} onClose={onClose}>
-            <View style={styles.content}>
+            <ScrollView
+                style={styles.scrollView}
+                contentContainerStyle={styles.content}
+                showsVerticalScrollIndicator={false}
+                bounces={false}
+            >
                 <Text style={[styles.title, { color: theme.text }]}>Share Quote</Text>
                 <View style={styles.previewContainer}>
                     <ViewShot
@@ -135,14 +140,18 @@ export default function ShareQuoteSheet({ isVisible, onClose, quote }: ShareQuot
                         <Text style={[styles.actionLabel, { color: COLORS.WHITE }]}>Share Image</Text>
                     </TouchableOpacity>
                 </View>
-            </View>
+            </ScrollView>
         </AnimatedBottomSheetModal>
     );
 }
 
 const styles = StyleSheet.create({
+    scrollView: {
+        flexGrow: 0,
+    },
     content: {
         alignItems: 'center',
+        paddingBottom: 16,
     },
     title: {
         fontSize: 18,
